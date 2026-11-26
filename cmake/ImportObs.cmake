@@ -1,0 +1,16 @@
+get_filename_component(dll_name "${OBS_DLL}" NAME)
+execute_process(COMMAND "${LINK_TOOL}" /dump /nologo /exports "${OBS_DLL}"
+    OUTPUT_VARIABLE listing COMMAND_ERROR_IS_FATAL ANY)
+string(REGEX MATCHALL "\n +[0-9]+ +[0-9A-Fa-f]+ +[0-9A-Fa-f]+ +[A-Za-z_][A-Za-z_0-9]*" rows "${listing}")
+if(NOT rows)
+    message(FATAL_ERROR "Could not read exports from ${OBS_DLL}")
+endif()
+set(definition "LIBRARY ${dll_name}\nEXPORTS\n")
+foreach(row IN LISTS rows)
+    string(REGEX MATCH "[A-Za-z_][A-Za-z_0-9]*$" symbol "${row}")
+    string(APPEND definition "    ${symbol}\n")
+endforeach()
+set(def_file "${IMPORT_LIB}.def")
+file(WRITE "${def_file}" "${definition}")
+execute_process(COMMAND "${LIB_TOOL}" /nologo /machine:x64 "/def:${def_file}" "/out:${IMPORT_LIB}"
+    COMMAND_ERROR_IS_FATAL ANY)
